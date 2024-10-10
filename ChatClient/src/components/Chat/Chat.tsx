@@ -1,4 +1,4 @@
-import  { useState } from 'react';
+import { useState } from 'react';
 import './Chat.css';
 
 interface Message {
@@ -6,9 +6,13 @@ interface Message {
   sender: 'left' | 'right';
 }
 
+
+
+
 function Chat() {
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
+  const [showDetails, setShowDetails] = useState<boolean>(false);
 
   const handleSendMessage = () => {
     if (message.trim() !== '') {
@@ -17,11 +21,28 @@ function Chat() {
     }
   };
 
+  const toggleDetails = () => {
+    setShowDetails(!showDetails);
+  };
+
+
   return (
     <div className="chat-container">
       <div className="heading">
-        <h1>Chat</h1>
+        <button className="add-btn">+</button>
+        <h1>Guest</h1>
+        <div className="profile-img" onClick={toggleDetails}>
+          <img src="https://via.placeholder.com/100" alt="Profile" />
+        </div>
       </div>
+
+      {showDetails && (
+        <div className="user-details">
+          <p>Name: Guest</p>
+          <p>Email: Guest@gmail.com</p>
+          <p>Unique Code: 1234</p>
+        </div>
+      )}
 
       <div className="chat-content">
         <div className="contact-list">
@@ -39,13 +60,6 @@ function Chat() {
                 <p>{msg.text}</p>
               </div>
             ))}
-
-            <div className="message left">
-              <p>hello</p>
-            </div>
-            <div className="message right">
-              <p>hi There</p>
-            </div>
           </div>
 
           <div className="input-section">
@@ -56,7 +70,6 @@ function Chat() {
               placeholder="Type a message..."
             />
             <button className="btn" onClick={handleSendMessage}>send</button>
-            {/* <FaSend className="btn" onClick={handleSendMessage} /> */}
           </div>
         </div>
       </div>
