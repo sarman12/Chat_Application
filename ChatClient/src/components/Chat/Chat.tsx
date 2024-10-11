@@ -38,41 +38,42 @@ function Chat() {
       navigate('/');
     }
 
-    // Listen for incoming messages
-    socket.on('receive-message', (message) => {
-      setArrayMessage((prevMessages) => [
-        ...prevMessages,
-        { text: message, sender: 'left' }, // Message from the other user
-      ]);
+    // Listen for incoming messages in the active room
+    socket.on('receive-message', (data) => {
+      if (data.room === activeRoom) {
+        setArrayMessage((prevMessages) => [
+          ...prevMessages,
+          { text: data.message, sender: 'left' }, // Message from the other user
+        ]);
+      }
     });
 
     return () => {
       socket.off('receive-message');
     };
-  }, [navigate]);
+  }, [activeRoom, navigate]);
 
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };
 
   const handleSelectUser = (uniqueCode: string) => {
-  const room = `${user.uniqueCode}-${uniqueCode}`;
-  setActiveRoom(room);
-  socket.emit('join-room', { room }); // Join a private chat room
-};
+    const room = `${user.uniqueCode}-${uniqueCode}`;  // Create a unique room between the two users
+    setActiveRoom(room);
+    socket.emit('join-room', { room }); // Join the private chat room
+  };
 
-const handleSendMessage = async () => {
-  if (message.trim() !== '' && activeRoom) {
-    setArrayMessage((prevMessages) => [
-      ...prevMessages,
-      { text: message, sender: 'right' },
-    ]);
+  const handleSendMessage = async () => {
+    if (message.trim() !== '' && activeRoom) {
+      setArrayMessage((prevMessages) => [
+        ...prevMessages,
+        { text: message, sender: 'right' },  // Message sent by the current user
+      ]);
 
-    socket.emit('private-message', { room: activeRoom, message }); // Send the message to the active room
-    setMessage('');
-  }
-};
-
+      socket.emit('private-message', { room: activeRoom, message }); // Send the message to the active room
+      setMessage('');
+    }
+  };
 
   const handleSearchUser = async () => {
     if (searchId.trim() !== '') {
@@ -93,7 +94,6 @@ const handleSendMessage = async () => {
       setSearchId(''); // Clear search input
     }
   };
-
 
   return (
     <div className="chat-container">

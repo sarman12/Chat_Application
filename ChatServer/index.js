@@ -172,23 +172,20 @@ app.get('/user', async (req, res) => {
   }
 });
 
-// Socket.io for private chat
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+    console.log('A user connected');
 
-  socket.on('join-room', ({ room }) => {
-    socket.join(room);
-    console.log(`User joined room: ${room}`);
-  });
-
-  socket.on('private-message', ({ room, message }) => {
-    io.to(room).emit('receive-message', message);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+    socket.on('send_message', (data) => {
+        const { sender, receiver, message } = data;
+        
+        // Emit the message only to the receiver
+        socket.to(receiver).emit('receive_message', {
+            sender,
+            message
+        });
+    });
 });
+
 
 
 server.listen(PORT, () => {
