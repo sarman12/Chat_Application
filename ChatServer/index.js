@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Sequelize, DataTypes } = require('sequelize');
 const cors = require('cors');
-const { nanoid } = require('nanoid');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -52,25 +51,7 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  uniqueCode: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-  },
 }, { timestamps: false });
-
-
-const generateUnique = async () => {
-  let unique;
-  let user;
-
-  do {
-    unique = nanoid(8);
-    user = await User.findOne({ where: { uniqueCode: unique } });
-  } while (user);
-
-  return unique;
-};
 
 sequelize.sync()
   .then(() => console.log('SQLite database connected'))
@@ -79,6 +60,7 @@ sequelize.sync()
     process.exit(1);
   });
 
+// Register Route
 app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -93,8 +75,7 @@ app.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const uniqueCode = await generateUnique();
-    const newUser = await User.create({ name, email, password: hashedPassword, uniqueCode });
+    const newUser = await User.create({ name, email, password: hashedPassword });
 
     return res.status(201).json({ message: 'User registered successfully', user: newUser });
   } catch (error) {
@@ -103,6 +84,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// Login Route
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -124,18 +106,19 @@ app.post('/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
 
-    return res.status(200).json({ message: 'Login successful', token, user: { name: user.name, email: user.email, uniqueCode: user.uniqueCode } });
+    return res.status(200).json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email } });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
+// Search User Route
 app.get('/user', async (req, res) => {
-  const { uniqueCode } = req.query;
+  const { email } = req.query;
 
   try {
-    const user = await User.findOne({ where: { uniqueCode } });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -146,7 +129,7 @@ app.get('/user', async (req, res) => {
   }
 });
 
-// Socket.IO events
+// Socket.IO events for chat
 io.on('connection', (socket) => {
   console.log('A user connected');
 

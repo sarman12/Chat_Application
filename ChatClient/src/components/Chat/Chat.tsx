@@ -15,7 +15,6 @@ interface User {
   id: number;
   name: string;
   email: string;
-  uniqueCode: string;
 }
 
 function Chat() {
@@ -25,7 +24,7 @@ function Chat() {
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
   const [showDetails, setShowDetails] = useState<boolean>(false);
-  const [searchId, setSearchId] = useState<string>('');
+  const [searchEmail, setSearchEmail] = useState<string>('');
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -68,20 +67,23 @@ function Chat() {
     setShowDetails(!showDetails);
   };
 
-  const handleSelectUser = (uniqueCode: string) => {
-    const room = `${[user.uniqueCode, uniqueCode].sort().join('-')}`;
+  const handleSelectUser = (email: string) => {
+    const room = `${[user.email, email].sort().join('-')}`;
     setActiveRoom(room);
     socket.emit('join-room', { room });
+    
+    // Clear previous messages when switching rooms
+    setArrayMessage([]);
   };
 
   const handleSearchUser = async () => {
-    if (searchId.trim() !== '') {
+    if (searchEmail.trim() !== '') {
       try {
-        const response = await axios.get(`http://localhost:3000/user?uniqueCode=${searchId}`);
+        const response = await axios.get(`http://localhost:3000/user?email=${searchEmail}`);
         if (response.data) {
           setSearchedUser(response.data);
         } else {
-          setSearchedUser(null); // If no user found, set to null
+          setSearchedUser(null);
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -91,10 +93,10 @@ function Chat() {
   };
 
   const handleAddUser = () => {
-    if (searchedUser && !addedUsers.some(user => user.uniqueCode === searchedUser.uniqueCode)) {
+    if (searchedUser && !addedUsers.some(user => user.email === searchedUser.email)) {
       setAddedUsers((prevUsers) => [...prevUsers, searchedUser]);
       setSearchedUser(null);
-      setSearchId('');
+      setSearchEmail('');
     }
   };
 
@@ -104,20 +106,16 @@ function Chat() {
         <input
           type="text"
           className="search-input"
-          value={searchId}
-          onChange={(e) => setSearchId(e.target.value)}
-          placeholder="Search by Unique ID"
+          value={searchEmail}
+          onChange={(e) => setSearchEmail(e.target.value)}
+          placeholder="Search by Email"
         />
-        <button onClick={handleSearchUser}>
-          Search
-        </button>
+        <button onClick={handleSearchUser}>Search</button>
       </div>
       {searchedUser && (
         <div className="searched-user">
           <p>Name: {searchedUser.name}</p>
-          <button onClick={handleAddUser}>
-            Add User
-          </button>
+          <button onClick={handleAddUser}>Add User</button>
         </div>
       )}
       <div className="heading">
@@ -131,41 +129,34 @@ function Chat() {
           <div className="user-details">
             <p>Name: {user.name}</p>
             <p>Email: {user.email}</p>
-            <p>Your Unique ID: {user.uniqueCode}</p>
           </div>
         )}
         <div className="added-users">
           {addedUsers.map((addedUser, index) => (
-            <div key={index} className="added-user" onClick={() => handleSelectUser(addedUser.uniqueCode)}>
+            <div key={index} className="added-user" onClick={() => handleSelectUser(addedUser.email)}>
               <p>{addedUser.name}</p>
             </div>
           ))}
         </div>
-        <div className="chat-section">
-          <div className="message-container">
-            {arrayMessage.map((msg, index) => (
-              <div key={index} className={`message ${msg.sender}`}>
-                <p>{msg.text}</p>
-              </div>
-            ))}
-          </div>
-          <div className="input-section">
-            <input
-              className="form-input"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter a message"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSendMessage();
-                }
-              }}
-            />
-            <button className="btn" onClick={handleSendMessage}>
-              Send
-            </button>
-          </div>
+        <div className="message-container">
+          {arrayMessage.map((msg, index) => (
+            <div key={index} className="message">
+              <p className={`${msg.sender === 'left' ? 'left' : 'right'}`}>
+                {msg.text}
+              </p>
+            </div>
+          ))}
         </div>
+      </div>
+      <div className="input-section">
+        <input
+          type="text"
+          className="form-input"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type a message"
+        />
+        <button onClick={handleSendMessage}>Send</button>
       </div>
     </div>
   );

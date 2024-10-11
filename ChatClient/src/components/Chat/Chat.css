@@ -31,16 +31,9 @@
 
 
 
-.chat-section {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 10px;
-}
+
 
 .message-container {
-    /* border: 3px red solid; */
     flex-grow: 1;
     max-height: 60vh;
     
@@ -53,7 +46,7 @@
 }
 
 .message {
-    max-width: fit-content+20px;
+    max-width: 100%;
     margin: 5px 0;
     padding: 5px;
     display: flex;
@@ -69,6 +62,8 @@
                 padding: 0rem 0rem 0rem 1rem;
         clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 10px 100%, 0% 100%,10px 70%);
         position: relative;
+        padding: 10px 30px;
+        border-radius: 0px 12px 10px 0px;
 }
 
 .right {
@@ -76,17 +71,14 @@
         background-color: #3f51b5;
         color: white;
         padding: 0rem 1rem 0 0;
-        clip-path: polygon(0% 0%, calc(100% - 10px) 0%, 100% 0%, calc(100% - 10px) 40%, calc(100% - 10px) 100%, 0% 100%);
+        clip-path: polygon(0% 0%, calc(100% - 10px) 0%, 100% -10%, calc(100% - 10px) 40%, calc(100% - 10px) 100%, 0% 100%);
         position: relative;
         text-align: right;
-        /* border-radius: 12px; */
+        border-radius: 12px 0px 10px 12px;
+        padding: 10px 30px;
 }
 
-.left p,
-.right p {
-    margin: 0;
-    padding: 10px;
-}
+
 
 .input-section {
     display: flex;
