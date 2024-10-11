@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
+// Initialize socket connection
 const socket = io('http://localhost:3000');
 
 interface Message {
@@ -19,7 +20,7 @@ interface User {
 
 function Chat() {
   const location = useLocation();
-  const user = location.state?.user;
+  const user: User = location.state?.user;
 
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
@@ -28,38 +29,64 @@ function Chat() {
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState<string>('');
 
   const navigate = useNavigate();
 
+  // Add logs to see if messages are received
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/');
-    }
-
+    // Listen for new messages
     socket.on('receive-message', (data) => {
-      if (data.room === activeRoom) {
+      const { room, message, sender } = data;
+      console.log('Received message:', message, 'from', sender);
+
+      // Auto-switch to the new room if it's different from the current one
+      if (room !== activeRoom) {
+        setActiveRoom(room);
+        setRecipientEmail(sender);
+
+        // Join the new room
+        socket.emit('join-room', { senderEmail: user.email, recipientEmail: sender });
+
+        // Fetch messages for the new room
+        socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: sender });
+      }
+
+      // Update message list, avoid adding your own message twice
+      if (sender !== user.email) {
         setArrayMessage((prevMessages) => [
           ...prevMessages,
-          { text: data.message, sender: 'left' },
+          { text: message, sender: 'left' }, // Always 'left' if it is from another user
         ]);
       }
     });
 
+    // Clean up socket event listener when the component unmounts
     return () => {
       socket.off('receive-message');
     };
-  }, [activeRoom, navigate]);
+  }, [activeRoom, user?.email]); // Ensure user email exists
 
   const handleSendMessage = () => {
-    if (message.trim() !== '' && activeRoom) {
+    if (message.trim() !== '' && activeRoom && recipientEmail) {
+      // Log the message before sending
+      console.log('Sending message:', message, 'to', recipientEmail);
+
+      // Add the message locally
       setArrayMessage((prevMessages) => [
         ...prevMessages,
-        { text: message, sender: 'right' },
+        { text: message, sender: 'right' }, // 'right' denotes current user’s message
       ]);
 
-      socket.emit('private-message', { room: activeRoom, message });
-      setMessage('');
+      // Emit the message to the server
+      socket.emit('private-message', {
+        room: activeRoom,
+        message,
+        senderEmail: user.email,
+        recipientEmail,
+      });
+
+      setMessage(''); // Clear the input
     }
   };
 
@@ -67,13 +94,16 @@ function Chat() {
     setShowDetails(!showDetails);
   };
 
-  const handleSelectUser = (email: string) => {
+  const handleSelectUser = async (email: string) => {
     const room = `${[user.email, email].sort().join('-')}`;
     setActiveRoom(room);
-    socket.emit('join-room', { room });
-    
-    // Clear previous messages when switching rooms
-    setArrayMessage([]);
+    setRecipientEmail(email);
+
+    // Join the room
+    socket.emit('join-room', { senderEmail: user.email, recipientEmail: email });
+
+    // Fetch existing messages for the room
+    socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: email });
   };
 
   const handleSearchUser = async () => {
@@ -93,12 +123,29 @@ function Chat() {
   };
 
   const handleAddUser = () => {
-    if (searchedUser && !addedUsers.some(user => user.email === searchedUser.email)) {
+    if (searchedUser && !addedUsers.some((user) => user.email === searchedUser.email)) {
       setAddedUsers((prevUsers) => [...prevUsers, searchedUser]);
       setSearchedUser(null);
       setSearchEmail('');
     }
   };
+
+  useEffect(() => {
+    if (activeRoom) {
+      socket.on('message-history', (data) => {
+        if (data.room === activeRoom) {
+          setArrayMessage(data.messages.map((msg: any) => ({
+            text: msg.text,
+            sender: msg.sender === user.email ? 'right' : 'left',
+          })));
+        }
+      });
+
+      return () => {
+        socket.off('message-history');
+      };
+    }
+  }, [activeRoom, user.email]);
 
   return (
     <div className="chat-container">
