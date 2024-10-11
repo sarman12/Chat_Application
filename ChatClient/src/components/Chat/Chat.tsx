@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3000'); // Connect to the server
+const socket = io('http://localhost:3000');
 
 interface Message {
   text: string;
@@ -27,9 +27,9 @@ function Chat() {
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [searchId, setSearchId] = useState<string>('');
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
-  const [addedUsers, setAddedUsers] = useState<User[]>([]); // State to hold added users
-  const [activeRoom, setActiveRoom] = useState<string | null>(null); // Active chat room
-  
+  const [addedUsers, setAddedUsers] = useState<User[]>([]);
+  const [activeRoom, setActiveRoom] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,12 +38,11 @@ function Chat() {
       navigate('/');
     }
 
-    // Listen for incoming messages in the active room
     socket.on('receive-message', (data) => {
       if (data.room === activeRoom) {
         setArrayMessage((prevMessages) => [
           ...prevMessages,
-          { text: data.message, sender: 'left' }, // Message from the other user
+          { text: data.message, sender: 'left' },
         ]);
       }
     });
@@ -53,33 +52,37 @@ function Chat() {
     };
   }, [activeRoom, navigate]);
 
+  const handleSendMessage = () => {
+    if (message.trim() !== '' && activeRoom) {
+      setArrayMessage((prevMessages) => [
+        ...prevMessages,
+        { text: message, sender: 'right' },
+      ]);
+
+      socket.emit('private-message', { room: activeRoom, message });
+      setMessage('');
+    }
+  };
+
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };
 
   const handleSelectUser = (uniqueCode: string) => {
-    const room = `${user.uniqueCode}-${uniqueCode}`;  // Create a unique room between the two users
+    const room = `${[user.uniqueCode, uniqueCode].sort().join('-')}`;
     setActiveRoom(room);
-    socket.emit('join-room', { room }); // Join the private chat room
-  };
-
-  const handleSendMessage = async () => {
-    if (message.trim() !== '' && activeRoom) {
-      setArrayMessage((prevMessages) => [
-        ...prevMessages,
-        { text: message, sender: 'right' },  // Message sent by the current user
-      ]);
-
-      socket.emit('private-message', { room: activeRoom, message }); // Send the message to the active room
-      setMessage('');
-    }
+    socket.emit('join-room', { room });
   };
 
   const handleSearchUser = async () => {
     if (searchId.trim() !== '') {
       try {
         const response = await axios.get(`http://localhost:3000/user?uniqueCode=${searchId}`);
-        setSearchedUser(response.data);
+        if (response.data) {
+          setSearchedUser(response.data);
+        } else {
+          setSearchedUser(null); // If no user found, set to null
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
         setSearchedUser(null);
@@ -90,8 +93,8 @@ function Chat() {
   const handleAddUser = () => {
     if (searchedUser && !addedUsers.some(user => user.uniqueCode === searchedUser.uniqueCode)) {
       setAddedUsers((prevUsers) => [...prevUsers, searchedUser]);
-      setSearchedUser(null); // Clear searched user after adding
-      setSearchId(''); // Clear search input
+      setSearchedUser(null);
+      setSearchId('');
     }
   };
 
@@ -112,7 +115,7 @@ function Chat() {
       {searchedUser && (
         <div className="searched-user">
           <p>Name: {searchedUser.name}</p>
-          <button onClick={handleAddUser} disabled={!searchedUser}>
+          <button onClick={handleAddUser}>
             Add User
           </button>
         </div>
@@ -131,7 +134,6 @@ function Chat() {
             <p>Your Unique ID: {user.uniqueCode}</p>
           </div>
         )}
-
         <div className="added-users">
           {addedUsers.map((addedUser, index) => (
             <div key={index} className="added-user" onClick={() => handleSelectUser(addedUser.uniqueCode)}>
@@ -139,7 +141,6 @@ function Chat() {
             </div>
           ))}
         </div>
-
         <div className="chat-section">
           <div className="message-container">
             {arrayMessage.map((msg, index) => (
@@ -148,7 +149,6 @@ function Chat() {
               </div>
             ))}
           </div>
-
           <div className="input-section">
             <input
               className="form-input"

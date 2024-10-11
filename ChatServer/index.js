@@ -7,7 +7,6 @@ const { nanoid } = require('nanoid');
 const http = require('http');
 const { Server } = require('socket.io');
 
-// Set up Express and Socket.io
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -60,20 +59,6 @@ const User = sequelize.define('User', {
   },
 }, { timestamps: false });
 
-const Friendship = sequelize.define('Friendship', {
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  friendId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: false, // 'pending', 'accepted', 'declined'
-  },
-}, { timestamps: false });
 
 const generateUnique = async () => {
   let unique;
@@ -94,7 +79,6 @@ sequelize.sync()
     process.exit(1);
   });
 
-// Register route
 app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -119,7 +103,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Login route
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -131,26 +114,17 @@ app.post('/login', async (req, res) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
 
-    return res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        name: user.name,
-        email: user.email,
-        uniqueCode: user.uniqueCode,
-      },
-    });
+    return res.status(200).json({ message: 'Login successful', token, user: { name: user.name, email: user.email, uniqueCode: user.uniqueCode } });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
@@ -165,29 +139,32 @@ app.get('/user', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    return res.status(200).json(user);
+    return res.json(user);
   } catch (error) {
-    console.error('Error searching user:', error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching user:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
+// Socket.IO events
 io.on('connection', (socket) => {
-    console.log('A user connected');
+  console.log('A user connected');
 
-    socket.on('send_message', (data) => {
-        const { sender, receiver, message } = data;
-        
-        // Emit the message only to the receiver
-        socket.to(receiver).emit('receive_message', {
-            sender,
-            message
-        });
-    });
+  socket.on('join-room', ({ room }) => {
+    socket.join(room);
+    console.log(`User joined room: ${room}`);
+  });
+
+  socket.on('private-message', ({ room, message }) => {
+    console.log(`Message sent to room ${room}: ${message}`);
+    socket.to(room).emit('receive-message', { room, message });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
 });
 
-
-
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
