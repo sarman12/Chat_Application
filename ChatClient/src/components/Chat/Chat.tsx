@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
 import './Chat.css';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000'); // Connect to the server
 
 interface Message {
   text: string;
   sender: 'left' | 'right';
-}
-
-interface PrivateMessage {
-  content: string;
-  from: number; // userId of sender
 }
 
 interface User {
@@ -22,159 +19,125 @@ interface User {
 }
 
 function Chat() {
+  const location = useLocation();
+  const user = location.state?.user;
+
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
   const [showDetails, setShowDetails] = useState<boolean>(false);
-  const [showSearch, setShowSearch] = useState<boolean>(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [recipientUniqueCode, setRecipientUniqueCode] = useState<string>('');
-  const [recipient, setRecipient] = useState<User | null>(null); // Selected recipient
-  const [contacts, setContacts] = useState<User[]>([]); // List of contacts
-
+  const [searchId, setSearchId] = useState<string>('');
+  const [searchedUser, setSearchedUser] = useState<User | null>(null);
+  const [addedUsers, setAddedUsers] = useState<User[]>([]); // State to hold added users
+  const [activeRoom, setActiveRoom] = useState<string | null>(null); // Active chat room
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      // Redirect to login if no token
-      navigate('/login');
-      return;
+      navigate('/');
     }
 
-    const newSocket = io('http://localhost:3000', {
-      auth: {
-        token: token,
-      },
+    // Listen for incoming messages
+    socket.on('receive-message', (message) => {
+      setArrayMessage((prevMessages) => [
+        ...prevMessages,
+        { text: message, sender: 'left' }, // Message from the other user
+      ]);
     });
 
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      console.log('Connected to server:', newSocket.id);
-    });
-
-    newSocket.on('private message', (msg: PrivateMessage) => {
-      if (recipient && msg.from === recipient.id) {
-        console.log('Private message received:', msg);
-        setArrayMessage((prevMessages) => [
-          ...prevMessages,
-          { text: msg.content, sender: 'left' },
-        ]);
-      }
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
-
-    // Cleanup on component unmount
     return () => {
-      newSocket.disconnect();
+      socket.off('receive-message');
     };
-  }, [navigate, recipient]);
-
-  const handleSendMessage = () => {
-    if (message.trim() !== '' && recipient && socket) {
-      // Send the message to the server with recipient's userId
-      socket.emit('private message', {
-        content: message,
-        to: recipient.id,
-      });
-
-      // Add the message to the current user's chat (sender: 'right')
-      setArrayMessage([...arrayMessage, { text: message, sender: 'right' }]);
-      setMessage('');
-    }
-  };
+  }, [navigate]);
 
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };
 
-  const toggleSearch = () => {
-    setShowSearch(!showSearch);
-  };
+  const handleSelectUser = (uniqueCode: string) => {
+  const room = `${user.uniqueCode}-${uniqueCode}`;
+  setActiveRoom(room);
+  socket.emit('join-room', { room }); // Join a private chat room
+};
+
+const handleSendMessage = async () => {
+  if (message.trim() !== '' && activeRoom) {
+    setArrayMessage((prevMessages) => [
+      ...prevMessages,
+      { text: message, sender: 'right' },
+    ]);
+
+    socket.emit('private-message', { room: activeRoom, message }); // Send the message to the active room
+    setMessage('');
+  }
+};
+
 
   const handleSearchUser = async () => {
-    if (recipientUniqueCode.trim() === '') {
-      alert('Please enter a unique code to search.');
-      return;
-    }
-
-    try {
-      const response = await axios.get('http://localhost:3000/user', {
-        params: { uniqueCode: recipientUniqueCode },
-      });
-
-      if (response.data) {
-        const foundUser: User = response.data;
-
-        // Check if the user is already in the contact list
-        const alreadyAdded = contacts.some(
-          (contact) => contact.id === foundUser.id
-        );
-
-        if (!alreadyAdded) {
-          setContacts([...contacts, foundUser]); // Add the found user to contacts
-        }
-
-        setRecipient(foundUser); // Set the recipient to the found user
-        setArrayMessage([]); // Clear previous messages
+    if (searchId.trim() !== '') {
+      try {
+        const response = await axios.get(`http://localhost:3000/user?uniqueCode=${searchId}`);
+        setSearchedUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        setSearchedUser(null);
       }
-    } catch (error: any) {
-      console.error('Error fetching user:', error);
-      alert(error.response?.data?.message || 'User not found.');
     }
   };
 
-  const handleSelectContact = (contact: User) => {
-    setRecipient(contact);
-    setArrayMessage([]); // Clear messages when switching to a new chat
+  const handleAddUser = () => {
+    if (searchedUser && !addedUsers.some(user => user.uniqueCode === searchedUser.uniqueCode)) {
+      setAddedUsers((prevUsers) => [...prevUsers, searchedUser]);
+      setSearchedUser(null); // Clear searched user after adding
+      setSearchId(''); // Clear search input
+    }
   };
+
 
   return (
     <div className="chat-container">
-      <div className={`search-div ${showSearch ? 'active' : ''}`}>
+      <div className="search-div">
         <input
           type="text"
-          placeholder="Enter Recipient's Unique Code"
-          value={recipientUniqueCode}
-          onChange={(e) => setRecipientUniqueCode(e.target.value)}
+          className="search-input"
+          value={searchId}
+          onChange={(e) => setSearchId(e.target.value)}
+          placeholder="Search by Unique ID"
         />
-        <button onClick={handleSearchUser}>Search</button>
+        <button onClick={handleSearchUser}>
+          Search
+        </button>
       </div>
-
+      {searchedUser && (
+        <div className="searched-user">
+          <p>Name: {searchedUser.name}</p>
+          <button onClick={handleAddUser} disabled={!searchedUser}>
+            Add User
+          </button>
+        </div>
+      )}
       <div className="heading">
-        <button className="add-btn" onClick={toggleSearch}>+</button>
-        <h1>Chat</h1>
+        <h1>{user.name}'s Inbox</h1>
         <div className="profile-img" onClick={toggleDetails}>
           <img src="https://via.placeholder.com/100" alt="Profile" />
         </div>
       </div>
-
-      {showDetails && recipient && (
-        <div className="user-details">
-          <p>Name: {recipient.name}</p>
-          <p>Email: {recipient.email}</p>
-          <p>Unique Code: {recipient.uniqueCode}</p>
-        </div>
-      )}
-
       <div className="chat-content">
-        <div className="contact-list">
-          <ul>
-            {contacts.map((contact) => (
-              <li
-                key={contact.id}
-                onClick={() => handleSelectContact(contact)}
-                className={`contact-item ${
-                  recipient?.id === contact.id ? 'active' : ''
-                }`}
-              >
-                {contact.name}
-              </li>
-            ))}
-          </ul>
+        {showDetails && (
+          <div className="user-details">
+            <p>Name: {user.name}</p>
+            <p>Email: {user.email}</p>
+            <p>Your Unique ID: {user.uniqueCode}</p>
+          </div>
+        )}
+
+        <div className="added-users">
+          {addedUsers.map((addedUser, index) => (
+            <div key={index} className="added-user" onClick={() => handleSelectUser(addedUser.uniqueCode)}>
+              <p>{addedUser.name}</p>
+            </div>
+          ))}
         </div>
 
         <div className="chat-section">
@@ -191,14 +154,16 @@ function Chat() {
               className="form-input"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder="Enter a message"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   handleSendMessage();
                 }
               }}
             />
-            <button className="btn" onClick={handleSendMessage}>Send</button>
+            <button className="btn" onClick={handleSendMessage}>
+              Send
+            </button>
           </div>
         </div>
       </div>

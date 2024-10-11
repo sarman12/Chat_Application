@@ -30,14 +30,17 @@ function Login() {
       if (response.data) {
         setSuccess(true);
         setError('');
-        const { token } = response.data;
+
+        const { token, user } = response.data;
         localStorage.setItem('token', token);
-        navigate('/chat'); // Redirect to chat page
+        localStorage.setItem('user', JSON.stringify(user));
+        navigate('/chat', { state: { user } });
       }
     } catch (error: any) {
       setError(error.response?.data?.message || 'Login failed. Please try again.');
     }
-  };
+};
+
 
   return (
     <div className="form-container">
