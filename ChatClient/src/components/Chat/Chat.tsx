@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-// Initialize socket connection
 const socket = io('http://localhost:3000');
 
 interface Message {
@@ -31,54 +30,39 @@ function Chat() {
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [recipientEmail, setRecipientEmail] = useState<string>('');
 
-  const navigate = useNavigate();
-
-  // Add logs to see if messages are received
   useEffect(() => {
-    // Listen for new messages
     socket.on('receive-message', (data) => {
       const { room, message, sender } = data;
       console.log('Received message:', message, 'from', sender);
 
-      // Auto-switch to the new room if it's different from the current one
       if (room !== activeRoom) {
         setActiveRoom(room);
         setRecipientEmail(sender);
 
-        // Join the new room
         socket.emit('join-room', { senderEmail: user.email, recipientEmail: sender });
 
-        // Fetch messages for the new room
         socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: sender });
       }
 
-      // Update message list, avoid adding your own message twice
       if (sender !== user.email) {
         setArrayMessage((prevMessages) => [
           ...prevMessages,
-          { text: message, sender: 'left' }, // Always 'left' if it is from another user
+          { text: message, sender: 'left' },
         ]);
       }
     });
-
-    // Clean up socket event listener when the component unmounts
     return () => {
       socket.off('receive-message');
     };
-  }, [activeRoom, user?.email]); // Ensure user email exists
-
+  }, [activeRoom, user?.email]);
   const handleSendMessage = () => {
     if (message.trim() !== '' && activeRoom && recipientEmail) {
-      // Log the message before sending
       console.log('Sending message:', message, 'to', recipientEmail);
 
-      // Add the message locally
       setArrayMessage((prevMessages) => [
         ...prevMessages,
-        { text: message, sender: 'right' }, // 'right' denotes current user’s message
+        { text: message, sender: 'right' },
       ]);
-
-      // Emit the message to the server
       socket.emit('private-message', {
         room: activeRoom,
         message,
@@ -86,7 +70,7 @@ function Chat() {
         recipientEmail,
       });
 
-      setMessage(''); // Clear the input
+      setMessage(''); 
     }
   };
 
@@ -99,10 +83,8 @@ function Chat() {
     setActiveRoom(room);
     setRecipientEmail(email);
 
-    // Join the room
     socket.emit('join-room', { senderEmail: user.email, recipientEmail: email });
 
-    // Fetch existing messages for the room
     socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: email });
   };
 
