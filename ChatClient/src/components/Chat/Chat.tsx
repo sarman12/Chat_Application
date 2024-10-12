@@ -9,6 +9,7 @@ const socket = io('http://localhost:3000');
 interface Message {
   text: string;
   sender: 'left' | 'right';
+  time: string; 
 }
 
 interface User {
@@ -21,6 +22,8 @@ function Chat() {
   const location = useLocation();
   const user: User = location.state?.user;
 
+  const navigate = useNavigate();
+
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
   const [showDetails, setShowDetails] = useState<boolean>(false);
@@ -29,10 +32,13 @@ function Chat() {
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [recipientEmail, setRecipientEmail] = useState<string>('');
+  const [activeUserEmail, setActiveUserEmail] = useState<string>(''); 
 
   useEffect(() => {
     socket.on('receive-message', (data) => {
       const { room, message, sender } = data;
+      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit',hour12:false }); // Get current time
+
       console.log('Received message:', message, 'from', sender);
 
       if (room !== activeRoom) {
@@ -47,7 +53,7 @@ function Chat() {
       if (sender !== user.email) {
         setArrayMessage((prevMessages) => [
           ...prevMessages,
-          { text: message, sender: 'left' },
+          { text: message, sender: 'left', time: currentTime },
         ]);
       }
     });
@@ -55,13 +61,14 @@ function Chat() {
       socket.off('receive-message');
     };
   }, [activeRoom, user?.email]);
+
   const handleSendMessage = () => {
     if (message.trim() !== '' && activeRoom && recipientEmail) {
-      console.log('Sending message:', message, 'to', recipientEmail);
+      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' ,hour12:false}); // Get current time
 
       setArrayMessage((prevMessages) => [
         ...prevMessages,
-        { text: message, sender: 'right' },
+        { text: message, sender: 'right', time: currentTime }, // Add time to sent message
       ]);
       socket.emit('private-message', {
         room: activeRoom,
@@ -82,6 +89,7 @@ function Chat() {
     const room = `${[user.email, email].sort().join('-')}`;
     setActiveRoom(room);
     setRecipientEmail(email);
+    setActiveUserEmail(email); 
 
     socket.emit('join-room', { senderEmail: user.email, recipientEmail: email });
 
@@ -119,6 +127,7 @@ function Chat() {
           setArrayMessage(data.messages.map((msg: any) => ({
             text: msg.text,
             sender: msg.sender === user.email ? 'right' : 'left',
+            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Convert timestamp to time format
           })));
         }
       });
@@ -158,34 +167,43 @@ function Chat() {
           <div className="user-details">
             <p>Name: {user.name}</p>
             <p>Email: {user.email}</p>
+            <button onClick={() => navigate('/register')}>Log Out</button>
           </div>
         )}
         <div className="added-users">
           {addedUsers.map((addedUser, index) => (
-            <div key={index} className="added-user" onClick={() => handleSelectUser(addedUser.email)}>
+            <div
+              key={index}
+              className={`added-user ${activeUserEmail === addedUser.email ? 'active' : ''}`}
+              onClick={() => handleSelectUser(addedUser.email)}
+            >
+              <img src={`https://via.placeholder.com/40?text=${addedUser.name.charAt(0)}`} alt={addedUser.name} />
               <p>{addedUser.name}</p>
             </div>
           ))}
         </div>
-        <div className="message-container">
-          {arrayMessage.map((msg, index) => (
-            <div key={index} className="message">
-              <p className={`${msg.sender === 'left' ? 'left' : 'right'}`}>
-                {msg.text}
-              </p>
-            </div>
-          ))}
+        <div className="message-content">
+          <div className="message-container">
+            {arrayMessage.map((msg, index) => (
+              <div key={index} className="message">
+                <p className={`${msg.sender === 'left' ? 'left' : 'right'}`}>
+                  {msg.text}
+                  <span className="message-time">{msg.time}</span> {/* Display the time */}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="input-section">
+            <input
+              type="text"
+              className="form-input"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message"
+            />
+            <button onClick={handleSendMessage}>Send</button>
+          </div>
         </div>
-      </div>
-      <div className="input-section">
-        <input
-          type="text"
-          className="form-input"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message"
-        />
-        <button onClick={handleSendMessage}>Send</button>
       </div>
     </div>
   );
