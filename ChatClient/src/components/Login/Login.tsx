@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../Main.css';
 import chatimg from '../../assets/chatimg.avif';
 import axios from 'axios';
@@ -9,7 +9,15 @@ function Login() {
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true); // Initially true to show loader on page load
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmitForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,37 +47,44 @@ function Login() {
     } catch (error: any) {
       setError(error.response?.data?.message || 'Login failed. Please try again.');
     }
-};
-
+  };
 
   return (
-    <div className="form-container">
-      <h1>Login</h1>
-      {error && <p className="error">{error}</p>}
-      {success && <p className="success">Login successful!</p>}
-      <form className="form-content" onSubmit={handleSubmitForm}>
-        <div className="form-group">
-          <input
-            type="email"
-            placeholder="Enter your Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Enter your Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit">Login</button>
-          <a href="#">Forgot Password?</a>
-          <p>Don't have an account? <a href="/register">Register</a></p>
+    <>
+      {loading ? (
+        <div className="loader-container">
+          <div className="loader"></div> {/* Spinner element */}
         </div>
-        <div className="img-div">
-          <img src={chatimg} alt="chatimg" />
+      ) : (
+        <div className="form-container">
+          <h1>Login</h1>
+          {error && <p className="error">{error}</p>}
+          {success && <p className="success">Login successful!</p>}
+          <form className="form-content" onSubmit={handleSubmitForm}>
+            <div className="form-group">
+              <input
+                type="email"
+                placeholder="Enter your Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="Enter your Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="submit">Login</button>
+              <a href="#">Forgot Password?</a>
+              <p>Don't have an account? <a href="/register">Register</a></p>
+            </div>
+            <div className="img-div">
+              <img src={chatimg} alt="chatimg" />
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
+      )}
+    </>
   );
 }
 

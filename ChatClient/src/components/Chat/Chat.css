@@ -32,7 +32,7 @@
 }
 
 .heading {
-    padding: 0rem 2rem;
+    padding: 0.3rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -43,7 +43,6 @@
 
 .heading .profile-img {
     cursor: pointer;
-    position: relative;
 }
 
 .heading .profile-img img {
@@ -83,7 +82,6 @@
     height: 65vh;
     box-shadow: 0 4px 20px var(--shadow-color);
     overflow-y: auto;
-    position: relative;
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -98,45 +96,45 @@
 .message {
     max-width: 100%;
     margin: 5px 0;
-    padding: 5px;
+    padding: 10px 30px;
     display: flex;
     flex-direction: column;
 }
-
 .left {
     align-self: flex-start;
     background-color: var(--message-bg-left);
     color: var(--text-color);
+    width: fit-content;
     text-align: left;
-    padding: 0rem 0rem 0rem 1rem;
-    clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 10px 100%, 0% 100%, 10px 70%);
-    position: relative;
-    padding: 10px 30px;
-    border-radius: 0px 12px 10px 0px;
+    padding: 10px 15px;
+    border-radius: 20px 20px 20px 0;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin: 5px 0;
+    transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 .right {
     align-self: flex-end;
     background-color: var(--message-bg-right);
     color: var(--secondary-color);
-    padding: 0rem 1rem 0 0;
-    clip-path: polygon(0% 0%, calc(100% - 10px) 0%, 100% -10%, calc(100% - 10px) 40%, calc(100% - 10px) 100%, 0% 100%);
-    position: relative;
     text-align: right;
-    border-radius: 12px 0px 10px 12px;
-    padding: 10px 30px;
+    padding: 10px 15px;
+    border-radius: 20px 20px 0 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin: 5px 0;
+    transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 .left:hover {
     transform: translateY(-2px);
-    background-color: #dcdcdc;
-    /* Slightly darker white */
+    background-color: rgba(220, 220, 220, 0.8);
 }
 
 .right:hover {
     transform: translateY(-2px);
-    background-color: #c51162;
-    /* Darker red */
+    background-color: rgba(245, 0, 87, 0.8);
 }
 
 .input-section {
@@ -157,7 +155,6 @@
     outline: none;
     background-color: var(--white);
     transition: border 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
 }
 
 .form-input::placeholder {
@@ -192,26 +189,23 @@
     border: none;
     border-radius: 20px;
     background-color: var(--primary-color);
-    /* Red */
     color: var(--secondary-color);
-    /* White */
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 .btn:hover {
     background-color: var(--secondary-color);
-    /* White */
     color: var(--primary-color);
-    /* Red */
     transform: scale(1.05);
 }
 
 .user-details {
+    display: flex;
+    flex-direction: column;
     max-width: 350px;
     min-width: 350px;
     background-color: var(--white);
-    /* White */
     padding: 2rem;
     border-left: 1px solid var(--border-color);
     box-shadow: -2px 0 5px var(--shadow-color);
@@ -227,7 +221,7 @@
 }
 
 .search-div {
-    padding: 0rem 1rem;
+    padding: 0 1rem;
     display: flex;
     align-items: center;
     position: relative;
@@ -241,7 +235,6 @@
     border-radius: 25px;
     outline: none;
     background-color: var(--background-color);
-    /* White */
     transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -252,15 +245,6 @@
 .search-div input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 5px var(--primary-color);
-}
-
-.search-div::before {
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    position: absolute;
-    left: 15px;
-    color: #999;
-    pointer-events: none;
 }
 
 .added-users {
@@ -276,6 +260,7 @@
 
 .added-user {
     display: flex;
+    /* justify-content: space-between; */
     align-items: center;
     padding: 0.8rem 1.2rem;
     font-size: 1.1rem;
@@ -284,12 +269,15 @@
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.added-user:last-child {
+    border-bottom: none;
+}
+
 .added-user:hover,
-.added-user:focus {
+.added-user:focus,
+.added-user.active {
     background-color: var(--primary-color);
-    /* Red */
     color: var(--secondary-color);
-    /* White */
 }
 
 .added-user img {
@@ -302,6 +290,15 @@
 
 .added-user img:hover {
     transform: scale(1.1);
+}
+.added-user button {
+    width:fit-content !important;
+    padding: 10px;
+    border: none;
+    /* background-color: var(--primary-color); */
+    font-size: 1.2rem;
+
+    
 }
 
 .searched-user {
@@ -316,7 +313,7 @@
 .searched-user button {
     width: fit-content !important;
     background-color: var(--secondary-color);
-    border: 1px solid #f50057;
+    border: 1px solid var(--primary-color);
     border-radius: 20px;
     color: var(--primary-color);
     cursor: pointer;
@@ -328,6 +325,14 @@
     color: var(--secondary-color);
     border: none;
     transform: scale(1.05);
+}
+
+.message-time {
+    display: block;
+    font-size: 0.75rem;
+    color: black;
+    text-align: right;
+    margin-top: 5px;
 }
 
 @keyframes fadeIn {
@@ -368,48 +373,4 @@
     .message-container {
         max-height: 60vh;
     }
-}
-
-/* Existing CSS */
-
-.added-user {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1.2rem;
-    font-size: 1.1rem;
-    border-bottom: 1px solid var(--border-color);
-    cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.added-user:last-child {
-    border-bottom: none;
-}
-
-.added-user:hover,
-.added-user:focus,
-.added-user.active {
-    /* Added .active class */
-    background-color: var(--primary-color);
-    color: var(--secondary-color);
-}
-
-.added-user img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 1rem;
-    transition: transform 0.3s ease;
-}
-
-.added-user img:hover {
-    transform: scale(1.1);
-}
-
-.message-time {
-    display: block;
-    font-size: 0.75rem;
-    color: white;
-    text-align: right;
-    margin-top: 5px;
 }

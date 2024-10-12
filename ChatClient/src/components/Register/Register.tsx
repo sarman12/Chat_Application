@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../Main.css';
 import axios from 'axios';
 import chating from '../../assets/chatimg.avif';
@@ -12,7 +12,18 @@ function Register() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Initially true to show loader on page load
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Simulate a delay to show the loading spinner before displaying the form
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 2000); // Adjust the delay time as needed
+
+        // Clean up the timer when component unmounts
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -56,46 +67,54 @@ function Register() {
     };
 
     return (
-        <div className="form-container">
-            <h1>Register</h1>
-            {error && <p className="error">{error}</p>}
-            {success && <p className="success">Registration successful! Redirecting...</p>}
-            <form className="form-content" onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <input 
-                        type="text" 
-                        placeholder="Enter your Name" 
-                        value={name} 
-                        onChange={(e) => setName(e.target.value)} 
-                    />
-                    <input 
-                        type="email" 
-                        placeholder="Enter your Email" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
-                    />
-                    <input 
-                        type="password" 
-                        placeholder="Enter your Password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                    />
-                    <input 
-                        type="password" 
-                        placeholder="Confirm your password" 
-                        value={confirmPassword} 
-                        onChange={(e) => setConfirmPassword(e.target.value)} 
-                    />
-                    <button type="submit" disabled={isLoading}>
-                        {isLoading ? 'Registering...' : 'Register'}
-                    </button>
-                    <p>Already have an account? <a href="/">Login</a></p>
+        <>
+            {loading ? (
+                <div className="loader-container">
+                    <div className="loader"></div> {/* Spinner element */}
                 </div>
-                <div className="img-div">
-                    <img src={chating} alt="chatimg" />
+            ) : (
+                <div className="form-container">
+                    <h1>Register</h1>
+                    {error && <p className="error">{error}</p>}
+                    {success && <p className="success">Registration successful! Redirecting...</p>}
+                    <form className="form-content" onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <input 
+                                type="text" 
+                                placeholder="Enter your Name" 
+                                value={name} 
+                                onChange={(e) => setName(e.target.value)} 
+                            />
+                            <input 
+                                type="email" 
+                                placeholder="Enter your Email" 
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                            />
+                            <input 
+                                type="password" 
+                                placeholder="Enter your Password" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                            />
+                            <input 
+                                type="password" 
+                                placeholder="Confirm your password" 
+                                value={confirmPassword} 
+                                onChange={(e) => setConfirmPassword(e.target.value)} 
+                            />
+                            <button type="submit" disabled={isLoading}>
+                                {isLoading ? 'Registering...' : 'Register'}
+                            </button>
+                            <p>Already have an account? <a href="/">Login</a></p>
+                        </div>
+                        <div className="img-div">
+                            <img src={chating} alt="chatimg" />
+                        </div>
+                    </form>
                 </div>
-            </form>
-        </div>
+            )}
+        </>
     );
 }
 

@@ -11,7 +11,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', 
+    origin: 'http://localhost:5173',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -46,7 +46,7 @@ const User = sequelize.define('User', {
     allowNull: false,
     unique: true,
     validate: {
-      isEmail: true, 
+      isEmail: true,
     },
   },
   password: {
@@ -89,25 +89,19 @@ const createRoomName = (email1, email2) => {
 app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
 
-  // Basic input validation
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
-    // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
     const newUser = await User.create({ name, email, password: hashedPassword });
 
-    // Respond with success
     return res.status(201).json({ 
       message: 'User registered successfully', 
       user: { id: newUser.id, name: newUser.name, email: newUser.email } 
@@ -121,14 +115,12 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  // Basic input validation
   if (!email || !password) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
     const user = await User.findOne({ where: { email } });
-
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -164,6 +156,45 @@ app.get('/user', async (req, res) => {
   }
 });
 
+
+app.post('/contacts', async (req, res) => {
+  const { userId, contactEmail } = req.body;
+
+  if (!userId || !contactEmail) {
+    return res.status(400).json({ message: 'User ID and contact email are required.' });
+  }
+
+  try {
+    const contactUser = await User.findOne({ where: { email: contactEmail } });
+    if (!contactUser) {
+      return res.status(404).json({ message: 'Contact not found.' });
+    }
+    res.status(201).json({ message: 'Contact added successfully.' });
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.get('/contacts/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const contacts = await User.findAll({ 
+      where: { id: { [Sequelize.Op.ne]: userId } } 
+    });
+    res.json(contacts);
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
+
+
+
+
 io.on('connection', (socket) => {
   console.log(`A user connected: Socket ID = ${socket.id}`);
 
@@ -174,72 +205,65 @@ io.on('connection', (socket) => {
     }
 
     const room = createRoomName(senderEmail, recipientEmail);
-
     socket.join(room);
     console.log(`User ${senderEmail} joined room: ${room}`);
-
     socket.to(room).emit('user-joined', { user: senderEmail });
   });
 
-socket.on('private-message', async ({ room, message, senderEmail, recipientEmail }) => {
-  // Input validation
-  if (!room || !message || !senderEmail || !recipientEmail) {
-    socket.emit('error', 'Room, message, senderEmail, and recipientEmail are required');
-    return;
-  }
-
-  try {
-    const senderUser = await User.findOne({ where: { email: senderEmail } });
-    const recipientUser = await User.findOne({ where: { email: recipientEmail } });
-
-    if (!senderUser || !recipientUser) {
-      socket.emit('error', 'Sender or recipient user not found');
+  socket.on('private-message', async ({ room, message, senderEmail, recipientEmail }) => {
+    if (!room || !message || !senderEmail || !recipientEmail) {
+      socket.emit('error', 'Room, message, senderEmail, and recipientEmail are required');
       return;
     }
 
-    // Save the message to the database
-    const newMessage = await Message.create({ 
-      room, 
-      sender: senderEmail, 
-      text: message 
-    });
+    try {
+      const senderUser = await User.findOne({ where: { email: senderEmail } });
+      const recipientUser = await User.findOne({ where: { email: recipientEmail } });
 
-    console.log(`Message from ${senderEmail} to ${recipientEmail} in room ${room}: ${message}`);
+      if (!senderUser || !recipientUser) {
+        socket.emit('error', 'Sender or recipient user not found');
+        return;
+      }
 
-    // Emit the message to the room (send to all users in the room)
-    io.to(room).emit('receive-message', { 
-      room, 
-      message: newMessage.text, 
-      sender: newMessage.sender,
-      createdAt: newMessage.createdAt
-    });
-  } catch (error) {
-    console.error('Error handling private-message:', error);
-    socket.emit('error', 'An error occurred while sending the message');
-  }
-});
+      const newMessage = await Message.create({ 
+        room, 
+        sender: senderEmail, 
+        text: message 
+      });
 
+      console.log(`Message from ${senderEmail} to ${recipientEmail} in room ${room}: ${message}`);
+
+      io.to(room).emit('receive-message', { 
+        room, 
+        message: newMessage.text, 
+        sender: newMessage.sender,
+        createdAt: newMessage.createdAt
+      });
+    } catch (error) {
+      console.error('Error handling private-message:', error);
+      socket.emit('error', 'An error occurred while sending the message');
+    }
+  });
 
   socket.on('fetch-messages', async ({ senderEmail, recipientEmail }) => {
-  if (!senderEmail || !recipientEmail) {
-    socket.emit('error', 'Both sender and recipient emails are required to fetch messages');
-    return;
-  }
+    if (!senderEmail || !recipientEmail) {
+      socket.emit('error', 'Both sender and recipient emails are required to fetch messages');
+      return;
+    }
 
-  try {
-    const room = createRoomName(senderEmail, recipientEmail);
-    const messages = await Message.findAll({
-      where: { room },
-      order: [['createdAt', 'ASC']],
-    });
-    socket.emit('message-history', { room, messages });
-  } catch (error) {
-    console.error('Error fetching message history:', error);
-    socket.emit('error', 'An error occurred while fetching messages');
-  }
-});
+    try {
+      const room = createRoomName(senderEmail, recipientEmail);
+      const messages = await Message.findAll({
+        where: { room },
+        order: [['createdAt', 'ASC']],
+      });
+      socket.emit('message-history', { room, messages });
+    } catch (error) {
+      console.error('Error fetching message history:', error);
+      socket.emit('error', 'An error occurred while fetching messages');
+    }
+  });
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`A user disconnected: Socket ID = ${socket.id}`);
   });
