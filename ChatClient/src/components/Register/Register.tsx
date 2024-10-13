@@ -12,16 +12,13 @@ function Register() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [loading, setLoading] = useState(true); // Initially true to show loader on page load
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Simulate a delay to show the loading spinner before displaying the form
         const timer = setTimeout(() => {
             setLoading(false);
-        }, 2000); // Adjust the delay time as needed
-
-        // Clean up the timer when component unmounts
+        }, 2000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -70,13 +67,13 @@ function Register() {
         <>
             {loading ? (
                 <div className="loader-container">
-                    <div className="loader"></div> {/* Spinner element */}
+                    <div className="loader"></div>
                 </div>
             ) : (
                 <div className="form-container">
                     <h1>Register</h1>
                     {error && <p className="error">{error}</p>}
-                    {success && <p className="success">Registration successful! Redirecting...</p>}
+                    {success && <p style={{color:'red'}} className="success">Registration successful! Redirecting...</p>}
                     <form className="form-content" onSubmit={handleSubmit}>
                         <div className="form-group">
                             <input 

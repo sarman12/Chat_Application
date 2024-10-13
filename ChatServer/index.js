@@ -1,4 +1,4 @@
-// Import necessary modules
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { Sequelize, DataTypes } = require('sequelize');
@@ -12,7 +12,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   },
 });
@@ -26,7 +26,7 @@ const PORT = 3000;
 
 app.use(cors({
   origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
 app.use(express.json());
@@ -53,6 +53,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  addedPerson: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    allowNull: false,
+  },
 }, { timestamps: false });
 
 const Message = sequelize.define('Message', {
@@ -75,12 +80,13 @@ const Message = sequelize.define('Message', {
   },
 }, { timestamps: true });
 
-sequelize.sync()
-  .then(() => console.log('SQLite database connected'))
+sequelize.sync({ force: false, alter: false })
+  .then(() => console.log('SQLite database synchronized'))
   .catch(err => {
-    console.error('Database connection error:', err);
+    console.error('Database synchronization error:', err);
     process.exit(1);
   });
+
 
 const createRoomName = (email1, email2) => {
   return [email1, email2].sort().join('-');
@@ -100,11 +106,11 @@ app.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const newUser = await User.create({ name, email, password: hashedPassword });
 
     return res.status(201).json({ 
       message: 'User registered successfully', 
-      user: { id: newUser.id, name: newUser.name, email: newUser.email } 
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -132,7 +138,12 @@ app.post('/login', async (req, res) => {
 
     return res.status(200).json({ 
       message: 'Login successful', 
-      user: { id: user.id, name: user.name, email: user.email } 
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        email: user.email,
+        addedPerson: user.addedPerson, // Send the added contacts list
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -140,14 +151,20 @@ app.post('/login', async (req, res) => {
   }
 });
 
+
 app.get('/user', async (req, res) => {
   const { email } = req.query;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
 
   try {
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
     const { password, ...userData } = user.toJSON();
     return res.json(userData);
   } catch (error) {
@@ -156,48 +173,47 @@ app.get('/user', async (req, res) => {
   }
 });
 
-
-app.post('/contacts', async (req, res) => {
+app.patch('/user/add-contact', async (req, res) => {
   const { userId, contactEmail } = req.body;
 
+  console.log('Request received: ', { userId, contactEmail }); 
   if (!userId || !contactEmail) {
-    return res.status(400).json({ message: 'User ID and contact email are required.' });
+    return res.status(400).json({ message: 'userId and contactEmail are required' });
   }
 
   try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if contact already exists
+    if (user.addedPerson.includes(contactEmail)) {
+      return res.status(400).json({ message: 'Contact already added' });
+    }
+
+    // Check if contactEmail exists in Users table
     const contactUser = await User.findOne({ where: { email: contactEmail } });
     if (!contactUser) {
-      return res.status(404).json({ message: 'Contact not found.' });
+      return res.status(404).json({ message: 'Contact user not found' });
     }
-    res.status(201).json({ message: 'Contact added successfully.' });
+
+    // Add contact
+    user.addedPerson.push(contactEmail);
+    await user.save();
+
+    return res.status(200).json({ message: 'Contact added successfully', addedPerson: user.addedPerson });
   } catch (error) {
     console.error('Error adding contact:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-app.get('/contacts/:userId', async (req, res) => {
-  const userId = req.params.userId;
-
-  try {
-    const contacts = await User.findAll({ 
-      where: { id: { [Sequelize.Op.ne]: userId } } 
-    });
-    res.json(contacts);
-  } catch (error) {
-    console.error('Error fetching contacts:', error);
-    return res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-
-
-
-
-
+// Socket.io Connection
 io.on('connection', (socket) => {
   console.log(`A user connected: Socket ID = ${socket.id}`);
 
+  // Listen for joining a room
   socket.on('join-room', ({ senderEmail, recipientEmail }) => {
     if (!senderEmail || !recipientEmail) {
       socket.emit('error', 'Both sender and recipient emails are required to join a room');
@@ -210,6 +226,7 @@ io.on('connection', (socket) => {
     socket.to(room).emit('user-joined', { user: senderEmail });
   });
 
+  // Listen for private messages
   socket.on('private-message', async ({ room, message, senderEmail, recipientEmail }) => {
     if (!room || !message || !senderEmail || !recipientEmail) {
       socket.emit('error', 'Room, message, senderEmail, and recipientEmail are required');
@@ -225,6 +242,7 @@ io.on('connection', (socket) => {
         return;
       }
 
+      // Create and save the message
       const newMessage = await Message.create({ 
         room, 
         sender: senderEmail, 
@@ -233,6 +251,7 @@ io.on('connection', (socket) => {
 
       console.log(`Message from ${senderEmail} to ${recipientEmail} in room ${room}: ${message}`);
 
+      // Emit the message to the room
       io.to(room).emit('receive-message', { 
         room, 
         message: newMessage.text, 
@@ -245,6 +264,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Listen for fetching message history
   socket.on('fetch-messages', async ({ senderEmail, recipientEmail }) => {
     if (!senderEmail || !recipientEmail) {
       socket.emit('error', 'Both sender and recipient emails are required to fetch messages');
@@ -264,11 +284,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`A user disconnected: Socket ID = ${socket.id}`);
   });
 });
 
+// Start the server
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
