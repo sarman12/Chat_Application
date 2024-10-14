@@ -26,38 +26,45 @@ function Chat() {
 
   const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
-
   const [showDetails, setShowDetails] = useState<boolean>(false);
-
   const [searchEmail, setSearchEmail] = useState<string>('');
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
-
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [activeUserEmail, setActiveUserEmail] = useState<string>(''); 
-  const [loading, setLoading] = useState<boolean>(true); 
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (user.addedPerson && user.addedPerson.length > 0) {
-      const fetchAddedUsers = async () => {
-        try {
-          const promises = user.addedPerson.map(email => axios.get(`http://localhost:3000/user?email=${email}`));
-          const responses = await Promise.all(promises);
-          const users = responses.map(res => res.data);
-          setAddedUsers(users);
-        } catch (error) {
-          console.error('Error fetching added users:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
+  const fetchAddedUsers = async () => {
+    if (user.addedPerson?.length) {
+      try {
+        const promises = user.addedPerson.map(email => axios.get(`http://localhost:3000/user?email=${email}`));
+        const responses = await Promise.all(promises);
+        const users = responses.map(res => res.data);
+        setAddedUsers(users);
 
-      fetchAddedUsers();
+        if (users.length > 0) {
+          const defaultUser = users[0];
+          const room = `${[user.email, defaultUser.email].sort().join('-')}`;
+          setActiveRoom(room);
+          setRecipientEmail(defaultUser.email);
+          setActiveUserEmail(defaultUser.email);
+          socket.emit('join-room', { senderEmail: user.email, recipientEmail: defaultUser.email });
+          socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: defaultUser.email });
+        }
+      } catch (error) {
+        console.error('Error fetching added users:', error);
+      } finally {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
-  }, [user.addedPerson]);
+  };
+  fetchAddedUsers();
+}, [user.addedPerson]);
+
 
   useEffect(() => {
     socket.on('receive-message', (data) => {
@@ -84,12 +91,11 @@ function Chat() {
     };
   }, [activeRoom, user.email]);
 
-  // Handle sending a message
   const handleSendMessage = () => {
-    if (message.trim() !== '' && activeRoom && recipientEmail) {
-      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (message.trim() && activeRoom && recipientEmail) {
+      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      setArrayMessage((prevMessages) => [
+      setArrayMessage(prevMessages => [
         ...prevMessages,
         { text: message, sender: 'right', time: currentTime },
       ]);
@@ -101,15 +107,10 @@ function Chat() {
         recipientEmail,
       });
 
-      setMessage(''); 
+      setMessage('');
     }
   };
 
-  const toggleDetails = () => {
-    setShowDetails(!showDetails);
-  };
-
-  // Handle selecting a user to start chatting
   const handleSelectUser = async (email: string) => {
     const room = `${[user.email, email].sort().join('-')}`;
     setActiveRoom(room);
@@ -120,16 +121,11 @@ function Chat() {
     socket.emit('fetch-messages', { senderEmail: user.email, recipientEmail: email });
   };
 
-  // Search user by email
   const handleSearchUser = async () => {
-    if (searchEmail.trim() !== '') {
+    if (searchEmail.trim()) {
       try {
         const response = await axios.get(`http://localhost:3000/user?email=${searchEmail}`);
-        if (response.data) {
-          setSearchedUser(response.data);
-        } else {
-          setSearchedUser(null);
-        }
+        setSearchedUser(response.data || null);
       } catch (error) {
         console.error('Error fetching user:', error);
         setSearchedUser(null);
@@ -138,7 +134,7 @@ function Chat() {
   };
 
   const handleAddUser = async () => {
-    if (searchedUser && !addedUsers.some((u) => u.email === searchedUser.email)) {
+    if (searchedUser && !addedUsers.some(u => u.email === searchedUser.email)) {
       try {
         const response = await axios.patch('http://localhost:3000/user/add-contact', {
           userId: user.id,
@@ -146,7 +142,7 @@ function Chat() {
         });
 
         if (response.data) {
-          setAddedUsers((prevUsers) => [...prevUsers, searchedUser]);
+          setAddedUsers(prevUsers => [...prevUsers, searchedUser]);
           setSearchedUser(null);
           setSearchEmail('');
         }
@@ -187,7 +183,7 @@ function Chat() {
               type="text"
               className="search-input"
               value={searchEmail}
-              onChange={(e) => setSearchEmail(e.target.value)}
+              onChange={e => setSearchEmail(e.target.value)}
               placeholder="Search by Email"
               autoComplete="email"
             />
@@ -201,7 +197,7 @@ function Chat() {
           )}
           <div className="heading">
             <h1>{user.name}'s Inbox</h1>
-            <div className="profile-img" onClick={toggleDetails}>
+            <div className="profile-img" onClick={() => setShowDetails(!showDetails)}>
               <img src={`https://via.placeholder.com/40?text=${user.name.charAt(0)}`} alt={user.name} />
             </div>
           </div>
@@ -233,13 +229,11 @@ function Chat() {
                 ))}
               </div>
               <div className="input-section">
-               
-
                 <input
                   type="text"
                   className="form-input"
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={e => setMessage(e.target.value)}
                   placeholder="Type a message"
                 />
                 <button onClick={handleSendMessage}>Send</button>
