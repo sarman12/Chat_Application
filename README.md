@@ -31,7 +31,7 @@ A real-time chat application built with Node.js, Express, Sequelize (SQLite), Re
 ## Setup and Installation
 
 Clone the repository and navigate to the backend folder:
-git clone https://github.com/your-repo/chat-app.git
+git clone https://github.com/sarman12/Chat_Application.git
 
 **Backend**
 
