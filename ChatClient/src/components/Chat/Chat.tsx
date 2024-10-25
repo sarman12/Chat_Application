@@ -3,6 +3,7 @@ import './Chat.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+// import background from '../../assets/background.png'
 
 const socket = io('http://localhost:3000');
 
@@ -192,7 +193,7 @@ function Chat() {
           {searchedUser && (
             <div className="searched-user">
               <p>Name: {searchedUser.name}</p>
-              <button onClick={handleAddUser}>Add User</button>
+              <button onClick={handleAddUser}> <p>+</p></button>
             </div>
           )}
           <div className="heading">
