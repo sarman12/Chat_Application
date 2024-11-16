@@ -41,9 +41,35 @@
     box-shadow: 0 4px 20px var(--shadow-color);
     overflow: hidden;
 }
+.settings{
+    padding: 10px;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+}
+.settings .fa{
+    font-size: 20px;
+    cursor: pointer;
+}
+.profile-img {
+    cursor: pointer;
+}
+
+.profile-img img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+}
+
+.profile-img img:hover {
+    transform: scale(1.1);
+}
 
 .heading {
-    padding: 0rem 4rem;
+    padding: 0.4rem 3rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -52,20 +78,7 @@
     position: relative;
 }
 
-.heading .profile-img {
-    cursor: pointer;
-}
 
-.heading .profile-img img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    transition: transform 0.3s ease;
-}
-
-.heading .profile-img img:hover {
-    transform: scale(1.1);
-}
 
 .heading h1 {
     font-size: 1.4rem;
@@ -74,10 +87,13 @@
 
 .chat-content {
     display: flex;
+    /* border: 2px red solid; */
     flex: 1;
+        backdrop-filter: blur(20px);
 }
 
 .message-content {
+    /* border: 2px red solid; */
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -86,16 +102,14 @@
 
 .message-container {
     border-radius: 10px;
-    max-height: 70vh;
-    height: 68vh;
-    box-shadow: 0px 0px 10px 0px black;
+    max-height: 80vh;
+    height: 78vh;
     overflow-y: auto;
     padding: 1rem;
     display: flex;
     flex-direction: column;
     scrollbar-width: none;
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease; /* Transition effects */
-    backdrop-filter: blur(20px);
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 
 
@@ -169,7 +183,7 @@
 }
 
 .form-input::placeholder {
-    color: #999;
+    color: #120d0d;
 }
 
 .form-input:focus {
@@ -209,6 +223,11 @@
     background-color: var(--secondary-color);
     color: var(--primary-color);
     transform: scale(1.05);
+}
+
+.messages{
+    /* border: 1px solid red; */
+    width: 80%;
 }
 
 .user-details {
@@ -264,10 +283,16 @@
     border: 1px solid var(--border-color);
     color: var(--text-color);
     background-color: rgb(24, 23, 23);
-    border-radius: 8px;
+    /* border-radius: 8px; */
     overflow: hidden;
-    width: 25%;
+    width: 18%;
     backdrop-filter: blur(20px);
+}
+.added-users h3{
+    text-align: left;
+    padding: 5px 20px;
+    color: rgb(247, 247, 247);
+    font-size: 25px;
 }
 
 .added-user {
