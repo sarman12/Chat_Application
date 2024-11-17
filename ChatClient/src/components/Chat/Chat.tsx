@@ -3,8 +3,9 @@ import './Chat.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import { BsArchive, BsCircle, BsGear, BsPlus, BsSearch, BsSend } from 'react-icons/bs';
+import { BsArchive, BsCircle, BsEmojiKiss, BsGear, BsPlus, BsSearch, BsSend } from 'react-icons/bs';
 // import background from '../../assets/background.png'
+import EmojiPicker from 'emoji-picker-react'; // Install this library: npm install emoji-picker-react
 
 const socket = io('http://localhost:3000');
 
@@ -28,8 +29,9 @@ function Chat() {
   const user: User = location.state?.user;
   const navigate = useNavigate();
 
-  const [message, setMessage] = useState<string>('');
+    const [message, setMessage] = useState<string>('');
   const [arrayMessage, setArrayMessage] = useState<Message[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [searchEmail, setSearchEmail] = useState<string>('');
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
@@ -39,7 +41,6 @@ function Chat() {
   const [activeUserEmail, setActiveUserEmail] = useState<string>('');
   const [activeUserName, setActiveUserName] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-
   useEffect(() => {
   const fetchAddedUsers = async () => {
     if (user.addedPerson?.length) {
@@ -181,6 +182,12 @@ function Chat() {
     }
   }, [activeRoom, user.email]);
 
+
+  const handleEmojiClick = (emojiObject: { emoji: string }) => {
+    setMessage(prevMessage => prevMessage + emojiObject.emoji);
+    setShowEmojiPicker(false);
+  };
+
   return (
     <>
       {loading ? (
@@ -273,7 +280,25 @@ function Chat() {
                       </div>
                     ))}
                   </div>
+                  {showEmojiPicker && (
+                    <div className="emoji-picker">
+                      <EmojiPicker onEmojiClick={handleEmojiClick} />
+                    </div>
+                  )}
+                  
+
                   <div className="input-section">
+                    <BsEmojiKiss
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      style={{
+                        color: 'black',
+                        background: 'yellow',
+                        fontSize: '30px',
+                        padding: '0.4rem',
+                        borderRadius: '50%',
+                        cursor:'pointer'
+                      }}
+                    />
                     <input
                       type="text"
                       className="form-input"
@@ -281,6 +306,7 @@ function Chat() {
                       onChange={e => setMessage(e.target.value)}
                       placeholder="Type a message"
                     />
+                  
                     <BsSend className="fa" onClick={handleSendMessage}/>
                   </div>
                 </div>

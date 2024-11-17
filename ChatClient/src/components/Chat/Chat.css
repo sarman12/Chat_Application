@@ -116,7 +116,7 @@
 
 .left { 
     align-self: flex-start;
-    background-color: var(--message-bg-left);
+    background-color: rgba(43, 40, 40, 0.5);
     color: var(--text-color);
     width: fit-content;
     text-align: left;
@@ -132,8 +132,7 @@
 
 .right {
     align-self: flex-end;
-    background-color: var(--message-bg-right);
-    color: var(--secondary-color);
+    background-color: rgb(248, 243, 243,0.3);
     text-align: right;
     padding: 10px 15px;
     border-radius: 20px 20px 0 20px;
@@ -145,15 +144,7 @@
     transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
-.left:hover {
-    transform: translateY(-2px);
-    background-color: rgba(220, 220, 220, 0.3);
-}
 
-.right:hover {
-    transform: translateY(-2px);
-    background-color: rgba(245, 0, 87, 0.8);
-}
 
 .input-section {
     margin-top: 20px;
@@ -205,6 +196,33 @@ span{
     border-radius: 50% 2px 50% 50%;
     color: var(--secondary-color);
     cursor: pointer;
+}
+.input-section input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+    font-size: 14px;
+    background-color: #ffffff;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+.input-section input:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+.emoji-icon {
+    cursor: pointer;
+    margin: 0 5px;
+}
+
+.emoji-picker {
+    position: absolute;
+    bottom: 58px;
+    left: 26vw;
+    z-index: 1000;
 }
 
 
