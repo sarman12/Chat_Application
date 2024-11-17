@@ -3,7 +3,7 @@ import './Chat.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import { BsArchive, BsCircle, BsGear } from 'react-icons/bs';
+import { BsArchive, BsCircle, BsGear, BsPlus, BsSearch, BsSend } from 'react-icons/bs';
 // import background from '../../assets/background.png'
 
 const socket = io('http://localhost:3000');
@@ -116,9 +116,9 @@ function Chat() {
       recipientEmail,
     });
 
-    setMessage('');
-  }
-};
+      setMessage('');
+    }
+  };
 
 
   const handleSelectUser = async (email: string,name:string) => {
@@ -190,32 +190,21 @@ function Chat() {
       ) : (
         <div className="chat-container">
         
-          {/* <div className="search-div">
-            <input
-              type="text"
-              className="search-input"
-              value={searchEmail}
-              onChange={e => setSearchEmail(e.target.value)}
-              placeholder="Search by Email"
-              autoComplete="email"
-            />
-            <button onClick={handleSearchUser}>Search</button>
-          </div> */}
-          {searchedUser && (
-            <div className="searched-user">
-              <p>Name: {searchedUser.name}</p>
-              <button onClick={handleAddUser}> <p>+</p></button>
-            </div>
-          )}
+          
+          
           
           <div className="chat-content">
             <div className="settings">
               <div className="profile-img" onClick={() => setShowDetails(!showDetails)}>
               <img src={`https://via.placeholder.com/40?text=${user.name.charAt(0)}`} alt={user.name} />
               </div>
+              <div className="sidebar">
                 <BsArchive title="Archive" className='fa' />
                 <BsCircle title="Status" className='fa' />
                 <BsGear title="Settings" className='fa' />
+
+              </div>
+                
 
             </div>
 
@@ -228,43 +217,75 @@ function Chat() {
             )}
             <div className="added-users">
               <h3>Chat</h3>
-              {addedUsers.map((addedUser, index) => (
-                <div key={index} className={`added-user ${activeUserEmail === addedUser.email ? 'active' : ''}`} onClick={() => handleSelectUser(addedUser.email,addedUser.name)}>
-                  <img src={`https://via.placeholder.com/40?text=${addedUser.name.charAt(0)}`} alt={addedUser.name} />
-                  <p>{addedUser.name}</p>
+
+              {/* Search Bar */}
+              <div className="search">
+                <div className="search-div">
+                <input
+                  type="text"
+                  className="search-input"
+                  value={searchEmail}
+                  onChange={e => setSearchEmail(e.target.value)}
+                  placeholder="Search by Email"
+                  autoComplete="email"
+                />
+                <BsSearch className="fa" onClick={handleSearchUser}/>
                 </div>
-              ))}
-            </div>
-            <div className="messages">
-              <div className="heading">
-                  <h2>{activeUserName}</h2>
+              {searchedUser && (
+              <div className="searched-user">
+
+                <p>Name: {searchedUser.name}</p>
+                <BsPlus className="fa" onClick={handleAddUser} />
               </div>
-              <div className="message-content">
-                
-                <div className="message-container">
-                  {arrayMessage.map((msg, index) => (
-                    <div key={index} className="message">
-                      <p className={`${msg.sender === 'left' ? 'left' : 'right'}`}>
-                        {msg.text}
-                        <span className="message-time">{msg.time}</span>
-        <span className="message-date">{msg.date}</span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="input-section">
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    placeholder="Type a message"
-                  />
-                  <button onClick={handleSendMessage}>Send</button>
-                </div>
+              
+          )}
+
+              
+              
               </div>
 
-            </div>
+              {/* {Added Users} */}
+
+              {addedUsers.map((addedUser, index) => (
+                <div key={index} className={`added-user ${activeUserEmail === addedUser.email ? 'active' : ''}`} onClick={() => handleSelectUser(addedUser.email,addedUser.name)}>
+                    <img src={`https://via.placeholder.com/40?text=${addedUser.name.charAt(0)}`} alt={addedUser.name} />
+                    <p>{addedUser.name}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Messages part */}
+              <div className="messages">
+                <div className="heading">
+                    <h2>{activeUserName}</h2>
+                </div>
+                <div className="message-content">
+                  
+                  <div className="message-container">
+                    {arrayMessage.map((msg, index) => (
+                      <div key={index} className="message">
+                        <p className={`${msg.sender === 'left' ? 'left' : 'right'}`}>
+                          {msg.sender === 'left' ? <span className="left_sender_name" >{activeUserName}</span> : <span className="right_sender_name" >{user.name}</span>}
+                          {msg.text}
+                          <span className="message-time">{msg.time}</span>
+                          <span className="message-date">{msg.date}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="input-section">
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      placeholder="Type a message"
+                    />
+                    <BsSend className="fa" onClick={handleSendMessage}/>
+                  </div>
+                </div>
+
+              </div>
             
 
           </div>
